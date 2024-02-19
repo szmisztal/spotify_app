@@ -1,15 +1,25 @@
 import datetime
 import urllib
 import requests
-from secrets import client_id, client_secret
+from secrets import client_id, client_secret, user_name
 
 
 class SpotifyClient:
     def __init__(self):
         self.client_id = client_id
         self.client_secret = client_secret
+        self.my_user_name = user_name
         self.api_token = self.get_api_token()
         self.client_start = datetime.datetime.now()
+
+    def user_inputs(self):
+        album_input = input("Album: ")
+        artist_input = input("Artist: ")
+        return (album_input, artist_input)
+
+    def user_input_parser(self, user_input):
+        parsed_input = urllib.parse.quote(user_input)
+        return parsed_input
 
     def get_api_token(self):
         url = "https://accounts.spotify.com/api/token"
@@ -21,37 +31,14 @@ class SpotifyClient:
         response = requests.post(url, data = data)
         return response.json().get("access_token")
 
-    # def refresh_api_token(self):
-    #     url = "https://accounts.spotify.com/api/token"
-    #     headers = {
-    #         "Content-Type": "application/x-www-form-urlencoded"
-    #     }
-    #     data = {
-    #         "grant_type": "refresh_token",
-    #         "refresh_token": self.api_token,
-    #         "client_id": client_id,
-    #         "client_secret": client_secret
-    #     }
-    #     response = requests.post(url, data = data, headers = headers)
-    #     return response.json()
-
     def call_spotify_api(self, endpoint, data = None):
-        full_url = f"https://api.spotify.com/v1/{endpoint}"
+        url = f"https://api.spotify.com/v1/{endpoint}"
         headers = {
            "Authorization": f"Bearer {self.api_token}"
         }
-        response = requests.get(full_url, headers = headers, data = data)
+        response = requests.get(url, headers = headers, data = data)
         response.raise_for_status()
         return response.json()
-
-    def user_inputs(self):
-        album_input = input("Album: ")
-        artist_input = input("Artist: ")
-        return (album_input, artist_input)
-
-    def user_input_parser(self, user_input):
-        parsed_input = urllib.parse.quote(user_input)
-        return parsed_input
 
     def search_query(self):
         # user_inputs = self.user_inputs()
@@ -77,15 +64,9 @@ class SpotifyClient:
             album_tracks_ids.append(track_id)
         return album_tracks_ids
 
-    def open_player(self, album_id):
-        endpoint = "me/player/play"
-        data = {
-            "context_uri": f"spotify:album:{album_id}"
-        }
-        response = self.call_spotify_api(endpoint, data)
+    def user_profile(self, user_id):
+        endpoint = f"users/{user_id}"
+        response = self.call_spotify_api(endpoint)
         return response
 
-api = SpotifyClient()
-album_id = api.get_album_id(api.search_query())
-print(api.get_album_tracks(album_id))
 
