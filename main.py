@@ -1,49 +1,42 @@
 import datetime
-import urllib
 import requests
 from secrets import client_id, client_secret, user_name, redirect_uri
 from spotify_auth import SpotifyAuth
+from interaction_with_user import UserInteraction
+
 
 class SpotifyClient:
-    def __init__(self, access_token, refresh_token):
+    def __init__(self, user_name, access_token, refresh_token):
         self.client_start = datetime.datetime.now()
         self.user_name = user_name
-        self.api_url = "https://api.spotify.com/v1/"
         self.access_token = access_token
         self.refresh_token = refresh_token
+        self.user_interaction = UserInteraction()
 
-    @staticmethod
-    def user_inputs():
-        album_input = input("Album: ")
-        artist_input = input("Artist: ")
-        return (album_input, artist_input)
-
-    @staticmethod
-    def user_input_parser(user_input):
-        parsed_input = urllib.parse.quote(user_input)
-        return parsed_input
-
-    def get_auth_headers(self):
+    def call_spotify_api(self, endpoint, request_type, data = None):
+        url = f"https://api.spotify.com/v1/{endpoint}"
         headers = {
             "Authorization": f"Bearer {self.access_token}"
         }
-        return headers
-
-    def create_request_url(self, endpoint):
-        url = self.api_url + endpoint
-        return url
+        if request_type == "get":
+            response = requests.get(url, headers = headers)
+        elif request_type == "post":
+            response = requests.post(url, headers = headers, json = data)
+        elif request_type == "put":
+            response = requests.put(url, headers = headers, json = data)
+        print(response)
+        print(response.json())
+        response.raise_for_status()
+        return response.json()
 
     def search_query(self):
-        # user_inputs = self.user_inputs()
-        # album = self.user_input_parser(user_inputs[0])
-        # artist = self.user_input_parser(user_inputs[1])
+        # user_inputs = self.user_interaction.user_album_and_artist_inputs()
+        # album = user_inputs[0]
+        # artist = user_inputs[1]
         album = "72 Seasons"
         artist = "Metallica"
         endpoint = f"search?q={album}+artist:{artist}&type=album"
-        response = requests.get(url = self.create_request_url(endpoint),
-                                headers = self.get_auth_headers())
-        response.raise_for_status()
-        return response.json()
+        return self.call_spotify_api(endpoint, "get")
 
     def get_album_id(self, response_from_search_query):
         for album in response_from_search_query["albums"]["items"]:
@@ -53,10 +46,11 @@ class SpotifyClient:
     def get_album_tracks(self, album_id):
         album_tracks_ids = []
         endpoint = f"albums/{album_id}/tracks"
-        response = requests.get(url = self.create_request_url(endpoint),
-                                headers = self.get_auth_headers())
-        response.raise_for_status()
-        for track in response.json()["items"]:
+        headers = {
+            "Authorization": f"Bearer {self.access_token}"
+        }
+        response = self.call_spotify_api(endpoint, "get", headers)
+        for track in response["items"]:
             track_id = track["id"]
             album_tracks_ids.append(track_id)
         return album_tracks_ids
@@ -66,13 +60,14 @@ class SpotifyClient:
         data = {
             "name": "test_playlist"
         }
-        headers = {"Authorization": f"Bearer {self.access_token}",
-                   "Content-Type": "application/json"}
-        response = requests.post(url = self.create_request_url(endpoint),
-                                 headers = headers,
-                                 json = data)
-        response.raise_for_status()
-        return response
+        self.call_spotify_api(endpoint, "post", data)
+
+    def start_playback(self, album_id):
+        endpoint = f"me/player/play"
+        data = {
+            "context_uri": album_id
+        }
+        self.call_spotify_api(endpoint, "put", data)
 
 
 if __name__ == "__main__":
@@ -80,5 +75,8 @@ if __name__ == "__main__":
     auth.generate_auth_code()
     token_response = auth.get_api_token()
     tokens = auth.set_up_auth_tokens(token_response)
-    client = SpotifyClient(tokens["access_token"], tokens["refresh_token"])
-    print(client.create_playlist())
+    client = SpotifyClient(user_name, tokens["access_token"], tokens["refresh_token"])
+    searched_query = client.search_query()
+    album_id = client.get_album_id(searched_query)
+    client.start_playback(album_id)
+
