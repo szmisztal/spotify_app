@@ -20,21 +20,15 @@ class SpotifyClient:
         }
         if request_type == "get":
             response = requests.get(url, headers = headers)
-        elif request_type == "post":
+        elif request_type == "post" or "put":
             response = requests.post(url, headers = headers, json = data)
-        elif request_type == "put":
-            response = requests.put(url, headers = headers, json = data)
-        print(response)
-        print(response.json())
         response.raise_for_status()
         return response.json()
 
     def search_query(self):
-        # user_inputs = self.user_interaction.user_album_and_artist_inputs()
-        # album = user_inputs[0]
-        # artist = user_inputs[1]
-        album = "72 Seasons"
-        artist = "Metallica"
+        user_inputs = self.user_interaction.user_album_and_artist_inputs()
+        album = user_inputs[0]
+        artist = user_inputs[1]
         endpoint = f"search?q={album}+artist:{artist}&type=album"
         return self.call_spotify_api(endpoint, "get")
 
@@ -57,8 +51,9 @@ class SpotifyClient:
 
     def create_playlist(self):
         endpoint = f"users/{self.user_name}/playlists"
+        playlist_name = self.user_interaction.playlist_name_input()
         data = {
-            "name": "test_playlist"
+            "name": playlist_name
         }
         self.call_spotify_api(endpoint, "post", data)
 
