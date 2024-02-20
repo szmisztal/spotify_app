@@ -5,10 +5,12 @@ from secrets import client_id, client_secret, user_name, redirect_uri
 from spotify_auth import SpotifyAuth
 
 class SpotifyClient:
-    def __init__(self):
+    def __init__(self, access_token, refresh_token):
         self.client_start = datetime.datetime.now()
         self.user_name = user_name
         self.api_url = "https://api.spotify.com/v1/"
+        self.access_token = access_token
+        self.refresh_token = refresh_token
 
     @staticmethod
     def user_inputs():
@@ -23,7 +25,7 @@ class SpotifyClient:
 
     def get_auth_headers(self):
         headers = {
-            "Authorization": f"Bearer {self.api_token}"
+            "Authorization": f"Bearer {self.access_token}"
         }
         return headers
 
@@ -62,12 +64,21 @@ class SpotifyClient:
     def create_playlist(self):
         endpoint = f"users/{self.user_name}/playlists"
         data = {
-            "name": "test_playlist",
+            "name": "test_playlist"
         }
+        headers = {"Authorization": f"Bearer {self.access_token}",
+                   "Content-Type": "application/json"}
         response = requests.post(url = self.create_request_url(endpoint),
-                                 headers = self.get_auth_headers(),
-                                 data = data)
+                                 headers = headers,
+                                 json = data)
         response.raise_for_status()
-        return response.json()
+        return response
 
 
+if __name__ == "__main__":
+    auth = SpotifyAuth(client_id, client_secret, redirect_uri)
+    auth.generate_auth_code()
+    token_response = auth.get_api_token()
+    tokens = auth.set_up_auth_tokens(token_response)
+    client = SpotifyClient(tokens["access_token"], tokens["refresh_token"])
+    print(client.create_playlist())
