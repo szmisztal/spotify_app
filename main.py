@@ -1,44 +1,35 @@
 import datetime
 import urllib
 import requests
-from secrets import client_id, client_secret, user_name
-
+from secrets import client_id, client_secret, user_name, redirect_uri
+from spotify_auth import SpotifyAuth
 
 class SpotifyClient:
     def __init__(self):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.my_user_name = user_name
-        self.api_token = self.get_api_token()
         self.client_start = datetime.datetime.now()
+        self.user_name = user_name
+        self.api_url = "https://api.spotify.com/v1/"
 
-    def user_inputs(self):
+    @staticmethod
+    def user_inputs():
         album_input = input("Album: ")
         artist_input = input("Artist: ")
         return (album_input, artist_input)
 
-    def user_input_parser(self, user_input):
+    @staticmethod
+    def user_input_parser(user_input):
         parsed_input = urllib.parse.quote(user_input)
         return parsed_input
 
-    def get_api_token(self):
-        url = "https://accounts.spotify.com/api/token"
-        data = {
-            "grant_type": "client_credentials",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret
-        }
-        response = requests.post(url, data = data)
-        return response.json().get("access_token")
-
-    def call_spotify_api(self, endpoint, data = None):
-        url = f"https://api.spotify.com/v1/{endpoint}"
+    def get_auth_headers(self):
         headers = {
-           "Authorization": f"Bearer {self.api_token}"
+            "Authorization": f"Bearer {self.api_token}"
         }
-        response = requests.get(url, headers = headers, data = data)
-        response.raise_for_status()
-        return response.json()
+        return headers
+
+    def create_request_url(self, endpoint):
+        url = self.api_url + endpoint
+        return url
 
     def search_query(self):
         # user_inputs = self.user_inputs()
@@ -47,8 +38,10 @@ class SpotifyClient:
         album = "72 Seasons"
         artist = "Metallica"
         endpoint = f"search?q={album}+artist:{artist}&type=album"
-        response = self.call_spotify_api(endpoint)
-        return response
+        response = requests.get(url = self.create_request_url(endpoint),
+                                headers = self.get_auth_headers())
+        response.raise_for_status()
+        return response.json()
 
     def get_album_id(self, response_from_search_query):
         for album in response_from_search_query["albums"]["items"]:
@@ -58,15 +51,23 @@ class SpotifyClient:
     def get_album_tracks(self, album_id):
         album_tracks_ids = []
         endpoint = f"albums/{album_id}/tracks"
-        response = self.call_spotify_api(endpoint)
-        for track in response["items"]:
+        response = requests.get(url = self.create_request_url(endpoint),
+                                headers = self.get_auth_headers())
+        response.raise_for_status()
+        for track in response.json()["items"]:
             track_id = track["id"]
             album_tracks_ids.append(track_id)
         return album_tracks_ids
 
-    def get_user_profile(self, user_id):
-        endpoint = f"users/{user_id}"
-        response = self.call_spotify_api(endpoint)
-        return response
+    def create_playlist(self):
+        endpoint = f"users/{self.user_name}/playlists"
+        data = {
+            "name": "test_playlist",
+        }
+        response = requests.post(url = self.create_request_url(endpoint),
+                                 headers = self.get_auth_headers(),
+                                 data = data)
+        response.raise_for_status()
+        return response.json()
 
 
