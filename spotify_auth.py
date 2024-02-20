@@ -1,5 +1,6 @@
 import base64
 import requests
+import urllib
 
 
 class SpotifyAuth:
@@ -7,14 +8,12 @@ class SpotifyAuth:
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
-        self.scope = "playlist-modify-public playlist-modify-private"
-        self.access_token = None
-        self.refresh_token = None
+        self.scope = urllib.parse.quote("playlist-modify-public playlist-modify-private")
 
     def generate_auth_code(self):
         url = "https://accounts.spotify.com/authorize"
         auth_code_url = url + "?response_type=code" + f"&client_id={self.client_id}" + f"&redirect_uri={self.redirect_uri}" + f"&scope={self.scope}"
-        print(f"Open link: {auth_code_url} and copy auth code from browser.")
+        print(f"Open link: {auth_code_url} and copy authorization code from browser.")
 
     def get_api_token(self):
         code = input("Paste auth code: ")
@@ -35,6 +34,10 @@ class SpotifyAuth:
         response.raise_for_status()
         return response.json()
 
-    def set_up_auth_tokens(self, response_with_tokens):
-        self.access_token = response_with_tokens["access_token"]
-        self.refresh_token = response_with_tokens["refresh_token"]
+    @staticmethod
+    def set_up_auth_tokens(response_with_tokens):
+        tokens = {
+            "access_token": response_with_tokens["access_token"],
+            "refresh_token": response_with_tokens["refresh_token"]
+        }
+        return tokens
