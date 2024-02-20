@@ -1,22 +1,22 @@
 import base64
 import requests
 import urllib
-
+import webbrowser
 
 class SpotifyAuth:
     def __init__(self, client_id, client_secret, redirect_uri):
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
-        self.scope = urllib.parse.quote("playlist-modify-public playlist-modify-private")
+        self.scope = urllib.parse.quote("playlist-modify-public playlist-modify-private user-modify-playback-state")
 
     def generate_auth_code(self):
         url = "https://accounts.spotify.com/authorize"
         auth_code_url = url + "?response_type=code" + f"&client_id={self.client_id}" + f"&redirect_uri={self.redirect_uri}" + f"&scope={self.scope}"
-        print(f"Open link: {auth_code_url} and copy authorization code from browser.")
+        webbrowser.open(auth_code_url)
 
     def get_api_token(self):
-        code = input("Paste auth code: ")
+        code = input("Paste auth code from browser: ")
         url = "https://accounts.spotify.com/api/token"
         credentials = f"{self.client_id}:{self.client_secret}"
         credentials_base64 = base64.b64encode(credentials.encode()).decode()
