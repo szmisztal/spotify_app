@@ -20,8 +20,10 @@ class SpotifyClient:
         }
         if request_type == "get":
             response = requests.get(url, headers = headers)
-        elif request_type == "post" or "put":
+        elif request_type == "post":
             response = requests.post(url, headers = headers, json = data)
+        elif request_type == "put":
+            response = requests.put(url, headers = headers, json = data)
         response.raise_for_status()
         return response.json()
 
